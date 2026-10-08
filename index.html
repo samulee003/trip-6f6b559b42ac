@@ -19,14 +19,15 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;font-family:var(--hand);color:var(--ink)}
 body{background:var(--kraft);background-image:var(--noise),radial-gradient(ellipse at 30% 20%,#d2ab7e 0%,#b88b5c 100%)}
-#book{position:absolute;inset:12px 14px;display:flex;filter:drop-shadow(0 6px 10px rgba(60,35,10,.35))}
+#book{position:absolute;inset:12px 14px;display:flex;isolation:isolate}
+#book:before{content:'';position:absolute;inset:0;border-radius:10px;box-shadow:0 6px 10px rgba(60,35,10,.35);z-index:-1;pointer-events:none}
 .page{position:relative;background-color:var(--paper);background-image:var(--noise),var(--blot)}
 #left{flex:1;border-radius:10px 3px 3px 10px;padding:16px 18px 16px 16px}
 #right{width:340px;border-radius:3px 10px 10px 3px;padding:0 16px 0 30px;display:flex;flex-direction:column;
   background-image:var(--noise),repeating-linear-gradient(to bottom,transparent 0 29px,rgba(120,150,190,.32) 29px 30px),linear-gradient(90deg,transparent 20px,rgba(214,90,90,.35) 20px 21.5px,transparent 21.5px)}
 #binding{width:22px;background:linear-gradient(90deg,#e8dcc0,#cdbd99 40%,#b9a782 50%,#cdbd99 60%,#e8dcc0);position:relative}
 #binding:before{content:'';position:absolute;inset:18px 2px;background:radial-gradient(circle at 50% 50%,#7d6a55 0 3.5px,#efe6d2 4px 5.5px,transparent 6px) 0 0/18px 34px repeat-y}
-#mapwrap{position:absolute;inset:16px 18px 16px 16px;border-radius:4px;transform:rotate(-.35deg);box-shadow:0 2px 5px rgba(80,50,20,.3);border:6px solid #fffaf0;overflow:hidden}
+#mapwrap{position:absolute;inset:16px 18px 16px 16px;border-radius:4px;box-shadow:0 2px 5px rgba(80,50,20,.3);border:6px solid #fffaf0;overflow:hidden}
 #map{position:absolute;inset:0;background:#efe6cf}
 #map .leaflet-tile-pane{filter:sepia(.55) saturate(.6) hue-rotate(-8deg) brightness(1.07) contrast(.82);opacity:.78}
 #map .city-pane{filter:url(#cityink);mix-blend-mode:multiply}
@@ -346,6 +347,9 @@ const unp=(pt,z)=>{const l=CRS.pointToLatLng(L.point(pt.x,pt.y),z);return [l.lat
 
 // ---------- map ----------
 const map = L.map('map', {zoomControl:true, zoomSnap:0, zoomDelta:0.5, wheelPxPerZoomLevel:100, fadeAnimation:false, markerZoomAnimation:false, minZoom:5, maxZoom:13.5});
+// v4: Leaflet rounds every projected point to whole pixels; keep sub-pixel precision so the route lines,
+// the vehicle and its heading glide instead of stepping/twitching by a pixel at a time
+map.latLngToLayerPoint=function(ll){ return this.project(L.latLng(ll))._subtract(this.getPixelOrigin()); };
 map.setView([48.9,14.9],7.6,{animate:false});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
   attribution:'Tiles &copy; Esri — Esri, USGS, NOAA · Natural Earth', maxNativeZoom:9, maxZoom:14}).addTo(map);
@@ -353,14 +357,34 @@ map.createPane('city'); map.getPane('city').style.zIndex=250; map.getPane('city'
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
   pane:'city', minZoom:10, maxZoom:14, maxNativeZoom:16, attribution:'Esri, HERE, OSM contributors'}).addTo(map);
 ['wash','border','water','route','doodles'].forEach((n,i)=>{const p=map.createPane(n); p.style.zIndex=[330,340,345,420,560][i]; p.classList.add(n+'-pane'); p.style.pointerEvents=n==='route'?'':'none';});
-map.getPane('route').style.filter='url(#rough)';
+// v4: the route used to get a screen-fixed SVG noise filter (url(#rough)); as the camera moved the lines slid
+// through that fixed noise and wobbled every frame. The hand-drawn wobble is now baked into the line itself,
+// anchored to the route, so it stays put while the camera pans and zooms.
+const _hsh=n=>{const x=Math.sin(n*127.1+311.7)*43758.5453; return x-Math.floor(x);};
+const _vn=x=>{const i=Math.floor(x), f=x-i, u=f*f*(3-2*f); return _hsh(i)*(1-u)+_hsh(i+1)*u;};
+const _wob=x=>(_vn(x)-0.5)*1.4+(_vn(x*2.13+17.3)-0.5)*0.6;
+const RoughLine=L.Polyline.extend({
+  _updatePath(){ const parts=this._parts, lg=this._lg; if(!lg||!parts.length){ this._renderer._updatePoly(this); return; }
+    const sh=lg.shot, zr=sh?(sh.type==='fix'?sh.cam.z:sh.z):10, z=this._map.getZoom(), k=Math.pow(2,zr-z);
+    const amp=1.25*clamp(1/k,0.35,1), seed=lg.gi*37.1, B=this._renderer._bounds, pad=60;
+    const near=(a,b)=>!B||!(Math.max(a.x,b.x)<B.min.x-pad||Math.min(a.x,b.x)>B.max.x+pad||Math.max(a.y,b.y)<B.min.y-pad||Math.min(a.y,b.y)>B.max.y+pad);
+    this._parts=parts.map(pts=>{ const out=[]; let sp=0;
+      for(let i=0;i<pts.length;i++){ const a=pts[i], b=pts[i+1]||null, pv=pts[i-1]||null;
+        const ref=b?a:(pv||a); let dx=(b?b.x-a.x:a.x-ref.x), dy=(b?b.y-a.y:a.y-ref.y); const len=Math.hypot(dx,dy)||1; dx/=len; dy/=len;
+        const n=b&&near(a,b)?Math.max(1,Math.ceil(len/6)):1;
+        for(let j=0;j<n;j++){ const f=j/n, x=a.x+(b?(b.x-a.x)*f:0), y=a.y+(b?(b.y-a.y)*f:0), o=amp*_wob((sp+len*f)*k/28+seed);
+          out.push(L.point(x-dy*o, y+dx*o)); }
+        if(b) sp+=Math.hypot(b.x-a.x,b.y-a.y); }
+      return out; });
+    this._renderer._updatePoly(this); this._parts=parts; }
+});
 const WASH={AUT:'#8fbf8f',CZE:'#e6a39a',DEU:'#d9cfae',SVK:'#c9c2e0',HUN:'#e8d29a',ITA:'#cfd9b8',SVN:'#b9d6d0',CHE:'#e0c0c0',POL:'#d6d0b4',HRV:'#d6d0b4',LIE:'#d6d0b4'};
 BASE.countries.forEach(c=>{
   L.geoJSON(c.g,{pane:'wash',interactive:false,style:{stroke:false,fill:true,fillColor:WASH[c.iso],fillOpacity:(c.iso==='AUT'||c.iso==='CZE')?.38:.16}}).addTo(map);
-  L.geoJSON(c.g,{pane:'border',interactive:false,style:{color:'#8b6b4a',weight:1.6,opacity:.7,dashArray:'7 4 1.5 4',fill:false}}).addTo(map);
+  L.geoJSON(c.g,{pane:'border',interactive:false,style:{color:'#8b6b4a',weight:1.6,opacity:.7,dashArray:'7 4 1.5 4',fill:false,noClip:true,smoothFactor:0}}).addTo(map);
 });
-BASE.rivers.forEach(r=>L.geoJSON(r.g,{pane:'water',interactive:false,style:{color:'#6fa3c6',weight:r.n==='Danube'||r.n==='Donau'?2.6:1.8,opacity:.6}}).addTo(map));
-BASE.lakes.forEach(l=>L.geoJSON(l.g,{pane:'water',interactive:false,style:{stroke:false,fillColor:'#8fbcd8',fillOpacity:.45}}).addTo(map));
+BASE.rivers.forEach(r=>L.geoJSON(r.g,{pane:'water',interactive:false,style:{color:'#6fa3c6',weight:r.n==='Danube'||r.n==='Donau'?2.6:1.8,opacity:.6,smoothFactor:0}}).addTo(map));
+BASE.lakes.forEach(l=>L.geoJSON(l.g,{pane:'water',interactive:false,style:{stroke:false,fillColor:'#8fbcd8',fillOpacity:.45,smoothFactor:0}}).addTo(map));
 const LABELS=[];
 function label(ll,txt,size,rot,op,w){LABELS.push({ll,w:w||size*4,h:size*1.4}); L.marker(ll,{pane:'doodles',interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div class="maplabel" style="font-size:${size}px;transform:translate(-50%,-50%) rotate(${rot||0}deg);opacity:${op||1}">${txt}</div>`})}).addTo(map);}
 label([47.62,15.2],'奧 地 利<div style="font-size:13px;letter-spacing:2px;text-align:center">Österreich</div>',22,-4,1,110);
@@ -433,7 +457,7 @@ DAYS.forEach((d,i)=>{
 });
 
 // ---------- legs & timeline ----------
-const SEG=[]; let T=1.5;
+const SEG=[]; let T=1.5, LEGS_N=0;
 STEPS.forEach((st,si)=>{
   st.t0=T;
   st.legs.forEach(lg=>{
@@ -441,9 +465,10 @@ STEPS.forEach((st,si)=>{
     const km=cum[cum.length-1];
     const dur= lg.m==='go'?0.95 : km<1?0.45 : km<6?(lg.m==='metro'?0.85:0.6) : clamp(0.85+km/110,1.2,2.6);
     Object.assign(lg,{coords:c,cum,km,t0:T,t1:T+dur,drawn:-1,step:si});
-    lg.hl=L.polyline([],{pane:'route',color:MODE[lg.m].color,weight:lg.m==='walk'||lg.m==='go'?6:10,opacity:.38,lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);
-    lg.ink=L.polyline([],{pane:'route',color:'#4a3426',weight:2.4,opacity:.9,dashArray:lg.m==='walk'||lg.m==='go'?'1 6':'8 6',lineCap:'round',lineJoin:'round'}).addTo(map);
-    lg.hit=L.polyline([],{pane:'route',color:'#000',weight:18,opacity:0,lineCap:'round',interactive:true}).addTo(map);
+    lg.gi=LEGS_N++;   // v4: noClip + smoothFactor 0 so dashes and line shape don't crawl or pop as the camera moves
+    lg.hl=new RoughLine([],{pane:'route',color:MODE[lg.m].color,weight:lg.m==='walk'||lg.m==='go'?6:10,opacity:.38,lineCap:'round',lineJoin:'round',interactive:false,noClip:true,smoothFactor:0}).addTo(map); lg.hl._lg=lg;
+    lg.ink=new RoughLine([],{pane:'route',color:'#4a3426',weight:2.4,opacity:.9,dashArray:lg.m==='walk'||lg.m==='go'?'1 6':'8 6',lineCap:'round',lineJoin:'round',noClip:true,smoothFactor:0}).addTo(map); lg.ink._lg=lg;
+    lg.hit=L.polyline([],{pane:'route',color:'#000',weight:18,opacity:0,lineCap:'round',interactive:true,smoothFactor:0}).addTo(map);
     lg.hit.bindTooltip(`${st.date} · ${lg.t.replace(/<[^>]+>/g,'')}（撳一下睇轉車詳情）`,{sticky:true});
     lg.hit.on('click',e=>{ L.DomEvent.stopPropagation(e); playing=false; updBtn(); showChain(si,[e.latlng.lat,e.latlng.lng]); });
     const s={type:'leg',step:si,leg:lg,t0:T,t1:T+dur}; lg.seg=s; SEG.push(s); T+=dur;
@@ -473,7 +498,15 @@ let S={x:800,y:600}, capB=130, capR=500, capBo=100, capRo=360, narrow=false, ovC
 function centerOf(cam){const f=wp(cam.f,cam.z); return unp({x:f.x,y:f.y-capB/2},cam.z);}
 function cp(ll,cam){const p=wp(ll,cam.z), f=wp(cam.f,cam.z); return {x:p.x-f.x+S.x/2, y:p.y-f.y+S.y/2+capB/2};}
 let applying=false;
-function applyCam(cam){ applying=true; try{ map._stop&&map._stop(); map._move(L.latLng(centerOf(cam)), cam.z); map._moveEnd(true); } finally{ applying=false; } }
+// v4 smooth camera: a full view reset each frame so tiles, map labels and vectors all move together
+// (map._move alone left tiles + labels frozen until the zoom changed, then they jumped), plus the
+// sub-pixel remainder that Leaflet rounds away is pushed into the map pane so motion is not stepped.
+function applyCam(cam){ applying=true; try{ map._stop&&map._stop();
+  const c=L.latLng(centerOf(cam)), z=cam.z;
+  map._resetView(c, z, true);
+  const ideal=map.project(c,map.getZoom()).subtract(map.getSize().divideBy(2)), po=map.getPixelOrigin();
+  L.DomUtil.setPosition(map._mapPane, L.point(po.x-ideal.x, po.y-ideal.y));
+} finally{ applying=false; } }
 function pinsAt(proj, z){ // display positions of pins (+ Vienna de-clutter offsets) and airport icon
   const pts=STOPS.map(s=>proj(s.ll)); const out=pts.map(p=>({x:p.x,y:p.y,tx:p.x,ty:p.y,k:0}));
   const a=pts[0], b=pts[5]; const d=Math.hypot(a.x-b.x,a.y-b.y); const k=clamp((54-d)/30,0,1);
@@ -624,8 +657,11 @@ function rawCam(t){
   return ovCam;
 }
 function smoothCam(t){
-  const N=10, W=0.85; const sm=[]; let zmax=-1;
-  for(let i=-N;i<=N;i++){ const u=i/N, c=rawCam(clamp(t+u*W,0,TOTAL)); sm.push([Math.exp(-u*u*3),c]); if(c.z>zmax) zmax=c.z; }
+  // v4: samples sit on a fixed time grid and the kernel fades to exactly 0 at the window edge, so the
+  // camera is continuous (the old samples moved with t and made the view jump when one crossed a shot change)
+  const W=0.85, H=W/16, E=Math.exp(-3); const sm=[]; let zmax=-1;
+  for(let k=Math.ceil((t-W)/H);k<=Math.floor((t+W)/H);k++){ const u=(k*H-t)/W, w=Math.exp(-u*u*3)-E; if(w<=0) continue;
+    const c=rawCam(clamp(k*H,0,TOTAL)); sm.push([w,c]); if(c.z>zmax) zmax=c.z; }
   let sw=0,sz=0,spw=0,sx=0,sy=0;
   sm.forEach(([w,c])=>{ sw+=w; sz+=w*c.z; const pw=w*Math.pow(2,0.9*(c.z-zmax)); const p=wp(c.f,0); spw+=pw; sx+=pw*p.x; sy+=pw*p.y; });
   return {f:unp({x:sx/spw,y:sy/spw},0), z:sz/sw};
@@ -698,7 +734,7 @@ function setTime(t,opt){
   const cam = (opt&&opt.noCam)||!camFollow ? null : smoothCam(curT);
   if(cam) applyCam(cam);
   const z=map.getZoom(), proj=ll=>map.latLngToContainerPoint(ll);
-  map.getPane('city').style.opacity=(0.9*sstep(9.6,10.8,z)).toFixed(3);
+  {const co=0.9*sstep(9.6,10.8,z), cpn=map.getPane('city'); cpn.style.opacity=co.toFixed(3); cpn.style.visibility=co>0.002?'visible':'hidden';}
   map.getPane('water').style.opacity=(1-0.75*sstep(9.8,11,z)).toFixed(3);
   // route drawing
   LEGS.forEach(lg=>{ const s=lg.seg; const f=curT<=s.t0?0:curT>=s.t1?1:legF(s,curT); if(f===lg.drawn) return;
@@ -708,13 +744,19 @@ function setTime(t,opt){
   const seg=segAt(curT);
   // ---- vehicle ----
   let vk=null, vll=null, vrot=0, vflip=false, valpha=1, vbob=0, vscale=1, moving=null;
-  const dirAt=(s,tt)=>{ const lg=s.leg, km=legF(s,tt)*lg.km, look=Math.max(0.12,Math.min(8,lg.km*0.04));
-    const a=proj(interp(lg,clamp((km-look)/lg.km,0,1)).p), b=proj(interp(lg,clamp((km+look)/lg.km,0,1)).p); return {dx:b.x-a.x,dy:b.y-a.y}; };
+  // v4: heading = weighted average over ~1.5 vehicle lengths of track either side, so small kinks in the rail/road geometry
+  // no longer make the vehicle tilt back and forth from frame to frame
+  const dirAt=(s,tt)=>{ const lg=s.leg, km=legF(s,tt)*lg.km;
+    const look=clamp(vehW*1.5*156.543*Math.cos(lg.coords[0][0]*Math.PI/180)/Math.pow(2,z),0.12,Math.max(0.12,lg.km*0.25));
+    let dx=0,dy=0; for(let k=1;k<=4;k++){ const o=look*k/4, w=1.25-k/4;
+      const a=proj(interp(lg,clamp((km-o)/lg.km,0,1)).p), b=proj(interp(lg,clamp((km+o)/lg.km,0,1)).p), l=Math.hypot(b.x-a.x,b.y-a.y);
+      if(l>1e-6){ dx+=w*(b.x-a.x)/l; dy+=w*(b.y-a.y)/l; } }
+    return {dx:dx||1e-6,dy}; };
   const angOf=(m,d)=>{ let ang=Math.atan2(d.dy,d.dx)*180/Math.PI, flip=false, rot=ang;
     if(m!=='walk'){ if(d.dx<0){flip=true; rot=ang-180; if(rot<-180) rot+=360;} if(rot>180) rot-=360; if(m==='go') rot*=0.3; rot=clamp(rot,-38,38);} return {rot,flip}; };
   if(!seg){ const fr=ease(Math.min(1,curT/1.45)); vk='plane'; vll=[P.VIE[0]+0.5*(1-fr),P.VIE[1]+0.85*(1-fr)]; vrot=-28; vflip=true; valpha=Math.min(1,curT/0.3); }
   else if(seg.type==='leg'){ const lg=seg.leg; vk=lg.m; vll=legPos(seg,curT); const a=angOf(lg.m,dirAt(seg,curT)); vrot=a.rot; vflip=a.flip;
-    vbob=(lg.m==='walk'||lg.m==='go')?0:-Math.abs(Math.sin(curT*11))*3; moving=seg; }
+    vbob=(lg.m==='walk'||lg.m==='go')?0:-(1-Math.cos(curT*2*Math.PI*1.6))*0.6; moving=seg; }
   else if(seg.type==='arrive'&&seg.stop>=0){ const lg=STEPS[seg.step].legs.slice(-1)[0]; const el=curT-seg.t0; vk=lg.m; vll=lg.coords[lg.coords.length-1];
     const a=angOf(lg.m,dirAt(lg.seg,lg.seg.t1)); vrot=a.rot; vflip=a.flip; valpha=1-sstep(0.05,0.4,el); vscale=1-0.25*sstep(0.05,0.4,el); }
   else if(seg.type==='arrive'){ const fr=sstep(0,1,(curT-seg.t0)/(seg.t1-seg.t0)); vk='plane'; vll=[P.VIE[0]+0.7*fr,P.VIE[1]+1.4*fr]; vrot=-24; vflip=false; valpha=1-sstep(0.75,1,fr); vscale=1+0.25*fr; }
@@ -739,14 +781,14 @@ function setTime(t,opt){
     const d=dirAt(moving,curT), L0=Math.hypot(d.dx,d.dy)||1, ux=d.dx/L0, uy=d.dy/L0;
     const sp=Math.hypot(proj(legPos(moving,curT+0.03)).x-proj(legPos(moving,curT-0.03)).x, proj(legPos(moving,curT+0.03)).y-proj(legPos(moving,curT-0.03)).y)/0.06;
     const mf=clamp((sp-150)/250,0,1); if(mf<0.05) return; const len=[20,28,16][j], off=[-14,0,14][j];
-    const cx=vp.x-ux*(vehW/2+14+len/2)+(-uy)*off, cy=vp.y-vehH*0.16+vbob-uy*(vehW/2+14+len/2)+ux*off;
+    const cx=vp.x-ux*(vehW/2+14+len/2)+(-uy)*off, cy=vp.y-vehH*0.16-uy*(vehW/2+14+len/2)+ux*off;
     el.style.width=len+'px'; tf(el,cx-len/2,cy-1.5,` rotate(${Math.atan2(uy,ux)*180/Math.PI}deg)`); el.style.opacity=(0.7*mf).toFixed(2); });
   // duration badge riding with the vehicle
   let badge=null;
   if(moving&&vp&&moving.leg.b&&(moving.t1-moving.t0)>=0.7){ const s=moving, bo=sstep(0,0.18,curT-s.t0)*(1-sstep(s.t1-0.18,s.t1,curT));
     if(vBadge._t!==s.leg.b){ vBadge.innerHTML=CLOCK+'<span>'+s.leg.b+'</span>'; vBadge._t=s.leg.b; }
     const bw=vBadge.offsetWidth, bh=vBadge.offsetHeight, lift=vehH*0.16;
-    let bx=vp.x-bw/2+vehW*0.18, by=vp.y-lift+vbob-vehH*0.5-bh-2;
+    let bx=vp.x-bw/2+vehW*0.18, by=vp.y-lift-vehH*0.5-bh-2;
     const cr=$('caption').getBoundingClientRect(), mr=mapEl.getBoundingClientRect(); const cap={l:cr.left-mr.left,t:cr.top-mr.top,r:cr.right-mr.left,b:cr.bottom-mr.top};
     if(overlapArea({l:bx,t:by,r:bx+bw,b:by+bh},cap)>0||by<4) by=vp.y+vehH*0.42;
     bx=clamp(bx,4,S.x-bw-4); tf(vBadge,bx,by); vBadge.style.opacity=bo.toFixed(2); if(bo>0.3) badge={l:bx,t:by,r:bx+bw,b:by+bh}; }
