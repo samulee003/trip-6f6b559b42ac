@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-Hant-HK">
-<head><meta name="robots" content="noindex,nofollow">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>聖誕歐洲手札 2026 · 動態路線</title>
@@ -51,13 +51,23 @@ body{background:var(--kraft);background-image:var(--noise),radial-gradient(ellip
 #capSum .clk{flex:none}
 .ref{font-style:normal;font-weight:400;font-size:11px;color:#b03a2e;border:1.2px solid rgba(176,58,46,.75);border-radius:3px;padding:0 3px;margin-left:5px;line-height:14px;display:inline-block;vertical-align:1px;background:rgba(255,250,240,.6);white-space:nowrap}
 #capNote{font-size:14px;color:#b03a2e;margin-top:2px;min-height:0}
+#capPlan{font-size:13px;line-height:1.38;margin-top:5px;padding-top:4px;border-top:1.5px dashed rgba(122,59,32,.35);color:#4a3426}
+#capPlan:empty{display:none}
+#capPlan .pr{display:flex;gap:5px;align-items:baseline}
+#capPlan .k{flex:none;font-size:11.5px;font-weight:700;border-radius:3px;padding:0 4px;line-height:16px;color:#fff}
+#capPlan .k.f{background:#5f9e6e}#capPlan .k.p{background:#c0703a}#capPlan .k.r{background:#7d8fb3}
+#capPlan .jl{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:#b03a2e;border-radius:9px;padding:0 7px;line-height:17px;margin-bottom:2px}
+#caption.compact #capPlan{display:none}
+.plabel{font-size:15px;font-weight:700;white-space:nowrap;color:#4a2a20;text-shadow:0 0 3px #fbf4e2,0 0 3px #fbf4e2,0 0 2px #fbf4e2,0 0 2px #fbf4e2;pointer-events:none}
+#playbar{display:none}
+.leaflet-bottom.leaflet-right .leaflet-control-zoom{margin-bottom:6px;margin-right:8px}
 #caption.compact{width:auto;max-width:330px;padding:9px 16px 8px}
 #caption.compact #capDate{font-size:21px}#caption.compact #capTitle{font-size:16px}#caption.compact #capLeg{font-size:13.5px;min-height:0;margin-top:2px}
 /* overlay (pins, stamps, vehicle) drawn above the map, below the caption */
 #ov{position:absolute;inset:0;z-index:460;pointer-events:none;overflow:hidden}
 #ovsvg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
 #ov .abs{position:absolute;left:0;top:0;will-change:transform,opacity}
-.pin{width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e7685c,#a8302a);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 3px rgba(0,0,0,.35);border:2px solid #fff3e0;pointer-events:auto;cursor:pointer;font-family:var(--hand)}
+.pin{width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e7685c,#a8302a);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 3px rgba(0,0,0,.35);border:2.5px solid #fff3e0;pointer-events:auto;cursor:pointer;font-family:var(--hand)}
 .stamp{pointer-events:auto;cursor:pointer}
 .stamp .perf{background:#fffdf5;border:5px dotted var(--paper2);box-shadow:1px 2px 4px rgba(70,40,10,.35)}
 .stamp .inner{border:1.5px solid var(--sc);margin:3px;padding:7px 18px 4px 8px;background:var(--sbg);text-align:left;position:relative;white-space:nowrap}
@@ -150,6 +160,13 @@ body{background:var(--kraft);background-image:var(--noise),radial-gradient(ellip
   #info.chain{width:calc(100vw - 60px)}
   #rcmob{display:block;position:relative;margin:14px auto 16px;transform:rotate(1.2deg)}
   #right h1{font-size:24px}
+  #left{height:72vh}
+  #capPlan{font-size:12px;line-height:1.32;margin-top:3px;padding-top:3px}
+  #capPlan .k{font-size:10.5px;line-height:14px}
+  #playbar{display:flex;position:absolute;left:0;right:0;bottom:0;z-index:1000;gap:8px;align-items:center;padding:6px 10px;background:rgba(251,246,234,.94);border-top:1.5px dashed #b9a07a}
+  #playbar button{font-family:var(--hand);font-size:16px;background:#fffaf0;color:var(--ink);border:2px solid var(--ink);border-radius:255px 15px 225px 15px/15px 225px 15px 255px;padding:2px 12px;box-shadow:1px 2px 0 rgba(74,52,38,.35)}
+  #playbar input{flex:1;accent-color:#b0603a;min-width:40px}
+  #mapwrap .leaflet-bottom{bottom:44px}
 }
 </style>
 </head>
@@ -160,16 +177,17 @@ body{background:var(--kraft);background-image:var(--noise),radial-gradient(ellip
 </svg>
 <div id="book">
   <div id="left" class="page">
-    <div id="mapwrap"><div id="map"></div><div id="paperover"></div></div>
+    <div id="mapwrap"><div id="map"></div><div id="paperover"></div><div id="playbar"><button id="mbPlay">暫停</button><button id="mbReplay">重播</button><input type="range" id="mbScrub" min="0" max="1000" value="0"></div></div>
     <div class="tape" style="top:6px;left:-12px;transform:rotate(-32deg)"></div>
     <div class="tape" style="top:4px;right:-14px;transform:rotate(30deg)"></div>
     <div class="tape" style="bottom:6px;right:-12px;transform:rotate(-28deg)"></div>
     <div class="tape" style="bottom:8px;left:-12px;transform:rotate(26deg)"></div>
-    <div id="caption"><div class="tape"></div><div id="capDate"></div><div id="capTitle"></div><div id="capSum"></div><div id="capLeg"></div><div id="capNote"></div></div>
+    <div id="caption"><div class="tape"></div><div id="capDate"></div><div id="capTitle"></div><div id="capSum"></div><div id="capLeg"></div><div id="capNote"></div><div id="capPlan"></div></div>
   </div>
   <div id="binding"></div>
   <div id="right" class="page">
     <h1>聖誕歐洲手札 2026</h1>
+    <div class="sub">0–5°C，夜晚零下 · 洋蔥式着衫</div>
     <div class="sub">12/20 – 12/31・兩大兩小（9 歲、6 歲）</div>
     <div class="sub">全程火車＋巴士・11 晚・6 間住宿</div>
     <div id="legend"></div>
@@ -322,6 +340,7 @@ const DAYS = [
   {d:'12/30',w:'三',step:5, ic:['train'], l1:'Railjet 直達', l2:'返維也納', l3:'08:37→12:49・4h10・€34–113', ref:true},
   {d:'12/31',w:'四',step:6, ic:['train','plane'], l1:'去機場・回家', l2:'13:00 起飛', l3:'火車 15–22 分・€16.60'}
 ];
+const PLAN = {"12/20": {"jl": 1, "f": "Rathausplatz 市集睇燈飾", "p": "冇", "r": "15:00 入住後小瞓 1–1.5 小時，早瞓"}, "12/21": {"jl": 1, "f": "美泉宮花園、Prater 遊樂場行吓", "p": "美泉宮動物園／Haus des Meeres 水族館", "r": "下晝返酒店休息"}, "12/22": {"f": "湖邊散步", "p": "冇", "r": "到埗後休息"}, "12/23": {"f": "湖邊同村莊散步、睇雪景", "p": "娃娃同 Barbie 博物館（6 歲以下免費）／Bad Ischl 溫泉", "r": "下晝休息"}, "12/24": {"f": "舊城、Domplatz 市集、河邊", "p": "平安夜晚餐（可揀平啲餐廳）", "p1": 1, "r": "下晝休息"}, "12/25": {"f": "Mirabell 花園、河邊、行山睇城堡外圍", "p": "冇（好多地方休息）", "r": "下晝休息"}, "12/26": {"f": "城堡庭園、護城河嘅熊、天橋、舊城市集", "p": "冇", "r": "下晝休息"}, "12/27": {"f": "舊城廣場聖誕市集、天文鐘報時", "p": "冇", "r": "到埗後休息"}, "12/28": {"f": "查理大橋、布拉格城堡外圍", "p": "城堡入內參觀／Petřín 纜車", "r": "下晝休息"}, "12/29": {"f": "行上 Petřín 山、Kampa 公園", "p": "國家科技博物館／鏡宮", "r": "下晝休息"}, "12/30": {"f": "Prater 遊樂場行吓", "p": "摩天輪（可選）", "p1": 1, "r": "到埗後休息"}};
 const RECEIPT = { title:'交通費合計', sub:'一家四口・兩大兩小', rows:[
   ['12/20','機場火車','€16.60'],['12/22','火車＋巴士','€119–129'],['12/24','巴士','€25–35'],['12/26','CK Shuttle','€245'],
   ['12/27','RegioJet＋地鐵票','€66'],['12/30','Railjet','€34–113'],['12/31','機場火車','€16.60']],
@@ -350,6 +369,7 @@ const map = L.map('map', {zoomControl:true, zoomSnap:0, zoomDelta:0.5, wheelPxPe
 // v4: Leaflet rounds every projected point to whole pixels; keep sub-pixel precision so the route lines,
 // the vehicle and its heading glide instead of stepping/twitching by a pixel at a time
 map.latLngToLayerPoint=function(ll){ return this.project(L.latLng(ll))._subtract(this.getPixelOrigin()); };
+map.zoomControl.setPosition('bottomright');
 map.setView([48.9,14.9],7.6,{animate:false});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
   attribution:'Tiles &copy; Esri — Esri, USGS, NOAA · Natural Earth', maxNativeZoom:9, maxZoom:14}).addTo(map);
@@ -423,6 +443,12 @@ const stampEls=STOPS.map((s,i)=>{
       <div class="city"><b>${s.n}</b>${s.city}</div><div class="dates">${s.dates}・住 ${s.nights} 晚</div>
       <div class="hotel">${s.h1}${s.h2?'<br>'+s.h2:''}</div></div></div><div class="postmark">已入住</div></div>`);
   el.style.opacity=0; el.onclick=e=>{e.stopPropagation(); showInfo(i);}; L.DomEvent.disableClickPropagation(el); return el;});
+const PL_SIDE=['l','r','l','r','r','b'];
+const plEls=STOPS.map(s=>{const el=mkDiv('ovpins','plabel',s.city); return el;});
+function plVis(z){ return 1-sstep(10.2,10.9,z); }
+function plSide(i,p,w){ let sd=PL_SIDE[i]; if(sd==='l'&&p.x-19-w<6) sd='t'; if(sd==='r'&&p.x+19+w>S.x-6) sd='t'; if(sd==='t'&&p.y-40<6) sd='b'; return sd; }
+function plPos(i,p,w){ const sd=plSide(i,p,w); return sd==='l'?{x:p.x-19-w,y:p.y-11}:sd==='r'?{x:p.x+19,y:p.y-11}:sd==='t'?{x:p.x-w/2,y:p.y-40}:{x:p.x-w/2,y:p.y+18}; }
+function plRect(i,p){ const w=STOPS[i].city.length*(/[a-z]/i.test(STOPS[i].city)?8.5:15.5)+4, q=plPos(i,p,w); return {l:q.x-2,t:q.y,r:q.x+w+2,b:q.y+22}; }
 // vehicle + effects
 const vShadow=mkDiv('ovveh','vshadow');
 const puffEls=Array.from({length:9},()=>mkDiv('ovveh','puff'));
@@ -509,8 +535,10 @@ function applyCam(cam){ applying=true; try{ map._stop&&map._stop();
 } finally{ applying=false; } }
 function pinsAt(proj, z){ // display positions of pins (+ Vienna de-clutter offsets) and airport icon
   const pts=STOPS.map(s=>proj(s.ll)); const out=pts.map(p=>({x:p.x,y:p.y,tx:p.x,ty:p.y,k:0}));
-  const a=pts[0], b=pts[5]; const d=Math.hypot(a.x-b.x,a.y-b.y); const k=clamp((54-d)/30,0,1);
-  if(k>0){ out[0]={x:a.x-24*k,y:a.y-26*k,tx:a.x,ty:a.y,k}; out[5]={x:b.x-14*k,y:b.y+28*k,tx:b.x,ty:b.y,k}; }
+  const a=pts[0], b=pts[5]; const d=Math.hypot(a.x-b.x,a.y-b.y); const k=clamp((66-d)/30,0,1);
+  if(k>0){ out[0]={x:a.x-26*k,y:a.y-32*k,tx:a.x,ty:a.y,k}; out[5]={x:b.x-16*k,y:b.y+32*k,tx:b.x,ty:b.y,k}; }
+  { const c=pts[1], e=pts[2], dd=Math.hypot(c.x-e.x,c.y-e.y), kk=clamp((36-dd)/36,0,1);
+    if(kk>0){ const ux=(c.x-e.x)/(dd||1), uy=(c.y-e.y)/(dd||1), push=(36-dd)/2+2; out[1]={x:c.x+ux*push,y:c.y+uy*push,tx:c.x,ty:c.y,k:kk}; out[2]={x:e.x-ux*push,y:e.y-uy*push,tx:e.x,ty:e.y,k:kk}; } }
   const v=proj(P.VIE), h=proj(P.WHBF); const ka=clamp((90-Math.hypot(v.x-h.x,v.y-h.y))/40,0,1);
   const air={x:v.x+20*ka,y:v.y+22*ka,tx:v.x,ty:v.y,k:ka};
   return {pins:out, air};
@@ -528,13 +556,15 @@ function buildGrid(cam,opt){
   rect(0,0,S.x,8,500); rect(0,S.y-8,S.x,S.y,500); rect(0,0,8,S.y,500); rect(S.x-8,0,S.x,S.y,500);
   if(opt.ov) rect(0,0,capRo+8,capBo+8,500); else rect(0,0,capR+8,capB+8,500);   // caption + zoom control
   rect(S.x-290,S.y-22,S.x,S.y,500);          // attribution
+  rect(S.x-56,S.y-(narrow?44:0)-100,S.x,S.y,500); // zoom control
+  if(narrow) rect(0,S.y-50,S.x,S.y,500);      // mobile play bar
   rect(S.x-60,0,S.x,36,500); rect(0,S.y-36,60,S.y,500); rect(S.x-60,S.y-36,S.x,S.y,500); // tape corners
   // route (all legs, also future ones)
   LEGS.forEach(lg=>{ let prev=null; lg.coords.forEach(ll=>{ const p=proj(ll); if(prev){ const n=Math.max(1,Math.ceil(Math.hypot(p.x-prev.x,p.y-prev.y)/2)); for(let k=0;k<=n;k++){ const x=prev.x+(p.x-prev.x)*k/n, y=prev.y+(p.y-prev.y)*k/n;
       if(x<-20||y<-20||x>S.x+20||y>S.y+20) continue; const cx=Math.floor(x/CELL), cy=Math.floor(y/CELL);
       for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++){ if(dx*dx+dy*dy>5) continue; put(cx+dx,cy+dy,150); const X=cx+dx,Y=cy+dy; if(X>=0&&Y>=0&&X<gw&&Y<gh) rt[Y*gw+X]=1; } } } prev=p; }); });
   const PA=pinsAt(proj,cam.z);
-  PA.pins.forEach(p=>rect(p.x-16,p.y-16,p.x+16,p.y+16,500));
+  PA.pins.forEach((p,i)=>{ rect(p.x-18,p.y-18,p.x+18,p.y+18,500); const L=plRect(i,p); if(plVis(cam.z)>0.3) rect(L.l,L.t,L.r,L.b,450); });
   rect(PA.air.x-18,PA.air.y-18,PA.air.x+110,PA.air.y+18,400);
   if(opt.tree){const p=PA.pins[2]; rect(p.x+TREE_OFF.x-26,p.y+TREE_OFF.y-30,p.x+TREE_OFF.x+26,p.y+TREE_OFF.y+32,300);}
   if(opt.castle){const p=PA.pins[3]; rect(p.x+CASTLE_OFF.x-28,p.y+CASTLE_OFF.y-28,p.x+CASTLE_OFF.x+28,p.y+CASTLE_OFF.y+28,300);}
@@ -603,15 +633,15 @@ function placeReceipt(grid,ks,stamps,segs){
 const ALLPTS=[].concat(...LEGS.map(l=>l.coords),STOPS.map(s=>s.ll),[P.VIE]);
 function computeOverview(){
   const p0=ALLPTS.map(ll=>wp(ll,0)); const x0=Math.min(...p0.map(p=>p.x)),x1=Math.max(...p0.map(p=>p.x)),y0=Math.min(...p0.map(p=>p.y)),y1=Math.max(...p0.map(p=>p.y));
-  const bw=x1-x0,bh=y1-y0, m=narrow?22:32;
-  const zfit=Math.log2(Math.min((S.x-2*m)/bw,(S.y-2*m-(narrow?capB:0))/bh));
+  const bw=x1-x0,bh=y1-y0, m=narrow?24:24, bot=narrow?48:0;
+  const zfit=Math.log2(Math.min((S.x-2*m-(narrow?0:40))/bw,(S.y-2*m-bot-(narrow?capBo:0))/bh));
   let fallback=null;
   for(let z=zfit; z>zfit-2.5; z-=0.06){
     const s=2**z, W=bw*s, H=bh*s; let best=null;
-    const oyMin=narrow?capB+10:m;
-    for(let ox=m; ox<=S.x-m-W+0.01; ox+=4) for(let oy=oyMin; oy<=S.y-m-H+0.01; oy+=4){
-      let bad=false; if(!narrow) for(const p of p0){ const x=(p.x-x0)*s+ox, y=(p.y-y0)*s+oy; if(x<capRo+16&&y<capBo+16){bad=true;break;} }
-      if(bad) continue; const sc=Math.abs(ox+W/2-S.x/2)+Math.abs(oy+H/2-(S.y+(narrow?capB:0))/2);
+    const oyMin=narrow?capBo+10:m;
+    for(let ox=m; ox<=S.x-m-W+0.01; ox+=4) for(let oy=oyMin; oy<=S.y-m-bot-H+0.01; oy+=4){
+      let bad=false; for(const p of p0){ const x=(p.x-x0)*s+ox, y=(p.y-y0)*s+oy; if(!narrow&&x<capRo+16&&y<capBo+16){bad=true;break;} if(x>S.x-100&&y>S.y-bot-110){bad=true;break;} } if(!bad){ const pv=wp(P.VIE,0), x=(pv.x-x0)*s+ox+20, y=(pv.y-y0)*s+oy+22; if(x>S.x-100&&y>S.y-bot-130) bad=true; }
+      if(bad) continue; const sc=Math.abs(ox+W/2-S.x/2)+Math.abs(oy+H/2-(S.y-bot+(narrow?capBo:0))/2);
       if(!best||sc<best.sc) best={ox,oy,sc};
     }
     if(!best) continue;
@@ -692,7 +722,7 @@ function capArrive(st){ if(st.stop>=0){ const s=STOPS[st.stop]; return [st.date,
 function capStay(d,i){ const s=STOPS[i]; return [d.d,d.w,`留喺 ${s.city}`,'',`${s.h1}・${s.dates}・住 ${s.nights} 晚`,d.note||'']; }
 function layoutDiary(){
   const r=$('right'); if(narrow){ tl.style.height=(12*30)+'px'; return; }
-  const avail=r.clientHeight-150-$('controls').offsetHeight-4; tl.style.height=Math.max(120,Math.floor(avail/30)*30)+'px';
+  const avail=r.clientHeight-180-$('controls').offsetHeight-4; tl.style.height=Math.max(120,Math.floor(avail/30)*30)+'px';
 }
 function initLayout(){
   S=map.getSize(); narrow=S.x<600; vehKind=null;
@@ -708,8 +738,9 @@ function setDay(idx){ if(idx===lastDay) return; lastDay=idx;
   DAYS.forEach((d,i)=>{const el=$('day'+i); el.classList.toggle('active',i===idx); el.classList.toggle('done',idx===null||(idx>=0&&i<idx));});
   const max=Math.max(0,tl.scrollHeight-tl.clientHeight); if(idx===null||idx<0){ tl.scrollTop=idx===null?max:0; return; }
   const el=$('day'+idx); const lead=Math.floor((tl.clientHeight-el.offsetHeight)/2/30)*30; tl.scrollTop=clamp(el.offsetTop-lead,0,max); }
-function setCap(date,wd,title,sum,legHtml,note,compact){ const k=date+title+sum+legHtml+note+!!compact; if(k===lastCap) return; lastCap=k; $('caption').classList.toggle('compact',!!compact);
+function setCap(date,wd,title,sum,legHtml,note,compact){ const k=date+title+sum+legHtml+note+!!compact+(PLAN[date]?1:0); if(k===lastCap) return; lastCap=k; $('caption').classList.toggle('compact',!!compact);
   $('capDate').innerHTML=date+(wd?`<span class="wd">（${wd}）</span>`:'');
+  { const pl=compact?null:PLAN[date]; $('capPlan').innerHTML=pl?`${pl.jl?'<div><span class="jl">調時差日</span></div>':''}<div class="pr"><span class="k f">免費</span><span>${pl.f}</span></div><div class="pr"><span class="k p">${pl.p==='冇'||pl.p.startsWith('冇')?'收費':(pl.p1?'收費':'收費二揀一')}</span><span>${pl.p}</span></div><div class="pr"><span class="k r">休息</span><span>${pl.r}</span></div>`:''; }
   $('capTitle').innerHTML=title; $('capSum').innerHTML=sum||''; $('capSum').style.display=sum?'':'none'; $('capLeg').innerHTML=legHtml||''; $('capNote').innerHTML=note?('※ '+note):''; }
 let infoLL=null;
 function showChain(si,ll){ const st=STEPS[si]; infoIdx=100+si; infoLL=ll; const el=$('info'); el.style.display='block'; el.classList.add('chain');
@@ -754,7 +785,7 @@ function setTime(t,opt){
     return {dx:dx||1e-6,dy}; };
   const angOf=(m,d)=>{ let ang=Math.atan2(d.dy,d.dx)*180/Math.PI, flip=false, rot=ang;
     if(m!=='walk'){ if(d.dx<0){flip=true; rot=ang-180; if(rot<-180) rot+=360;} if(rot>180) rot-=360; if(m==='go') rot*=0.3; rot=clamp(rot,-38,38);} return {rot,flip}; };
-  if(!seg){ const fr=ease(Math.min(1,curT/1.45)); vk='plane'; vll=[P.VIE[0]+0.5*(1-fr),P.VIE[1]+0.85*(1-fr)]; vrot=-28; vflip=true; valpha=Math.min(1,curT/0.3); }
+  if(!seg){ const fr=ease(Math.min(1,curT/1.45)); vk='plane'; vll=[P.VIE[0]+0.06*(1-fr),P.VIE[1]+0.1*(1-fr)]; vrot=-12*(1-fr); vflip=true; valpha=Math.min(1,curT/0.3); }
   else if(seg.type==='leg'){ const lg=seg.leg; vk=lg.m; vll=legPos(seg,curT); const a=angOf(lg.m,dirAt(seg,curT)); vrot=a.rot; vflip=a.flip;
     vbob=(lg.m==='walk'||lg.m==='go')?0:-(1-Math.cos(curT*2*Math.PI*1.6))*0.6; moving=seg; }
   else if(seg.type==='arrive'&&seg.stop>=0){ const lg=STEPS[seg.step].legs.slice(-1)[0]; const el=curT-seg.t0; vk=lg.m; vll=lg.coords[lg.coords.length-1];
@@ -803,7 +834,7 @@ function setTime(t,opt){
   STATIONS.forEach((s,i)=>{ const op=stationVis(z,s[3]); const el=stEls[i]; el.style.opacity=op.toFixed(2); if(op<=0) return; const p=proj(s[1]); const w=el.offsetWidth;
     if(s[2]==='l') tf(el,p.x-w+6,p.y-10); else if(s[2]==='t') tf(el,p.x-w/2,p.y-26); else if(s[2]==='b') tf(el,p.x-w/2,p.y+5); else tf(el,p.x-6,p.y-10); });
   // ---- pins ----
-  PA.pins.forEach((p,i)=>{ tf(pinEls[i],p.x,p.y); const on=p.k>0.05; stems[i].setAttribute('d',`M${p.tx} ${p.ty} L${p.x} ${p.y}`); stems[i].setAttribute('opacity',on?0.85:0);
+  PA.pins.forEach((p,i)=>{ tf(pinEls[i],p.x,p.y); { const el=plEls[i], o=plVis(z); el.style.opacity=o.toFixed(2); if(o>0){ const q=plPos(i,p,el.offsetWidth); q.x=clamp(q.x,6,S.x-el.offsetWidth-6); tf(el,q.x,q.y); el._q=q; } } const on=p.k>0.05; stems[i].setAttribute('d',`M${p.tx} ${p.ty} L${p.x} ${p.y}`); stems[i].setAttribute('opacity',on?0.85:0);
     stemDots[i].setAttribute('cx',p.tx); stemDots[i].setAttribute('cy',p.ty); stemDots[i].setAttribute('opacity',on?0.9:0); });
   // ---- stamps ----
   const ovP=proj(ovCam.f), ovD=Math.hypot(ovP.x-S.x/2,ovP.y-S.y/2-capB/2);
@@ -850,19 +881,22 @@ function setTime(t,opt){
   else if(seg.type==='arrive'){ setCap(...capArrive(STEPS[seg.step])); setDay(DAYS.findIndex(d=>d.step===seg.step)); }
   else if(seg.type==='stay'){ setCap(...capStay(seg.day,seg.stop)); setDay(DAYS.indexOf(seg.day)); }
   else { setCap(...CAP_END); setDay(null); }
-  $('scrub').value=Math.round(curT/TOTAL*1000);
+  { const cr=$('caption').getBoundingClientRect(), mr=mapEl.getBoundingClientRect(); plEls.forEach(el=>{ const q=el._q; if(q&&+el.style.opacity>0&&q.y<cr.bottom-mr.top+2&&q.x<cr.right-mr.left&&q.x+el.offsetWidth>cr.left-mr.left) el.style.opacity=0; }); }
+  $('scrub').value=$('mbScrub').value=Math.round(curT/TOTAL*1000);
 }
 function loop(ts){ if(lastTs!==null&&playing){ setTime(curT+Math.min(0.1,(ts-lastTs)/1000)*speed); if(curT>=TOTAL){playing=false;updBtn();} } lastTs=ts; requestAnimationFrame(loop); }
-function updBtn(){$('btnPlay').textContent=playing?'暫停':'播放';}
+function updBtn(){$('btnPlay').textContent=$('mbPlay').textContent=playing?'暫停':'播放';}
 $('btnPlay').onclick=()=>{ if(!playing&&curT>=TOTAL) setTime(0); playing=!playing; camFollow=true; updBtn(); };
 $('btnReplay').onclick=()=>{ camFollow=true; hideInfo(); setTime(0); playing=true; updBtn(); };
+$('mbPlay').onclick=()=>$('btnPlay').onclick(); $('mbReplay').onclick=()=>$('btnReplay').onclick(); $('mbScrub').oninput=e=>$('scrub').oninput(e);
+['mbPlay','mbReplay','playbar'].forEach(id=>L.DomEvent.disableClickPropagation($(id)));
 $('speed').onchange=e=>{speed=parseFloat(e.target.value);};
 $('scrub').oninput=e=>{ camFollow=true; setTime(e.target.value/1000*TOTAL); playing=false; updBtn(); };
 map.on('dragstart zoomstart',()=>{ if(applying) return; playing=false; camFollow=false; updBtn(); });
 map.on('move zoom',()=>{ if(!applying&&ovCam) setTime(curT,{noCam:true}); });
 let rsT=null; map.on('resize',()=>{ clearTimeout(rsT); rsT=setTimeout(()=>{ initLayout(); lastDay=-2; setTime(curT); },150); });
 // font preloader (so handwriting glyphs are ready before animation)
-$('preload').innerHTML = [document.body.innerText, JSON.stringify(STOPS), JSON.stringify(STEPS.map(s=>[s.title,s.sum,s.note,s.total,s.chain,s.legs.map(l=>[l.t,l.b])])), JSON.stringify(DAYS), JSON.stringify(RECEIPT), '參考 合計 交通費 撳一下睇轉車詳情 出發前再核對', STATIONS.map(s=>s[0]).join(' '), '已入住 抵達 留喺 全程日晚間住宿 聖誕快樂 回家 維也納機場 0123456789（）・→＋'].join(' ') + '<b>'+STOPS.map(s=>s.city+s.n).join(' ')+' 12/2031 日一二三四五六 聖誕歐洲手札</b>';
+$('preload').innerHTML = [document.body.innerText, JSON.stringify(STOPS), JSON.stringify(STEPS.map(s=>[s.title,s.sum,s.note,s.total,s.chain,s.legs.map(l=>[l.t,l.b])])), JSON.stringify(DAYS), JSON.stringify(PLAN), '調時差日 免費 收費二揀一 收費 休息', JSON.stringify(RECEIPT), '參考 合計 交通費 撳一下睇轉車詳情 出發前再核對', STATIONS.map(s=>s[0]).join(' '), '已入住 抵達 留喺 全程日晚間住宿 聖誕快樂 回家 維也納機場 0123456789（）・→＋'].join(' ') + '<b>'+STOPS.map(s=>s.city+s.n).join(' ')+' 12/2031 日一二三四五六 聖誕歐洲手札</b>';
 window.__check=()=>{ // automated QA for the current frame
   const pr=window.__probe(), mr=mapEl.getBoundingClientRect(), cr=$('caption').getBoundingClientRect();
   const cap={l:cr.left-mr.left,t:cr.top-mr.top,r:cr.right-mr.left,b:cr.bottom-mr.top};
